@@ -884,6 +884,7 @@ pam_sm_authenticate (pam_handle_t * pamh,
   struct cfg cfg_st;
   struct cfg *cfg = &cfg_st; /* for DBG macro */
   size_t templates = 0;
+  size_t i;
   char *urls[10];
   char *tmpurl = NULL;
   char *onlypasswd = NULL;
@@ -1100,6 +1101,24 @@ pam_sm_authenticate (pam_handle_t * pamh,
     {
       skip_bytes = password_len - (cfg->token_id_length + TOKEN_OTP_LEN);
     }
+  else if(password_len < cfg->token_id_length + TOKEN_OTP_LEN)
+    {
+      DBG("Password length is only %zu and not long enough, OTP token needs to be %u",
+	   password_len, cfg->token_id_length + TOKEN_OTP_LEN);
+      retval = PAM_AUTHINFO_UNAVAIL;
+      goto done;
+    }
+  for (i=skip_bytes; i<password_len; i++)
+  {
+    if (strchr("cbdefghijklnrtuv", password[i]) == NULL )
+    {
+      DBG("Password contains a non modhex character %c", password[i]);
+      retval = PAM_AUTHINFO_UNAVAIL;
+      goto done;
+
+    }
+  }
+
 
   DBG ("Skipping first %i bytes. Length is %zu, token_id set to %u and token OTP always %u.",
 	skip_bytes, password_len, cfg->token_id_length, TOKEN_OTP_LEN);
